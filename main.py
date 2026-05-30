@@ -11,20 +11,21 @@ def get_ip():
     url = "https://api.ipify.org/?format=json"
     response = requests.get(url)
 
-    return response.json()["ip"]
+    return response.json()
 
 
 def get_info():
-    ip_address = get_ip()
-    url = f"https://ipinfo.io/{ip_address}/geo"
+    ip_address = get_ip()["ip"]
+    url_geo = f"https://ipinfo.io/{ip_address}/geo"
+    response = requests.get(url_geo)
 
-    return url
+    return response
 
 
 class YD:
     def __init__(self, token):
-        self.token = token
-        self.headers = {"Autorization": f"OAuth {self.token}"}
+        self.token: str = token
+        self.headers = {"Authorization": f"OAuth {self.token}"}
         self.base_url = "https://cloud-api.yandex.net"
 
     def create_folder(self, path):
@@ -35,27 +36,23 @@ class YD:
         )
         return 200 <= response.status_code < 300
 
-    def upload_file_by_url(self, file_url, path):
-        file_name = requests.get(file_url).json()["city"]
-        params = {"path": f"{path}/{file_name}"}
+    def upload_file_by_url(self, path_disk):
+        file_name = get_info().json()["city"]
+        params = {"path": f"{path_disk}/{file_name}.txt"}
         response = requests.get(
-            "https://cloud-api.yandex.net/v1/disk/resources/upload",
+            f"{self.base_url}/v1/disk/resources/upload",
             headers=self.headers,
             params=params,
         )
 
         upload_link = response.json()["href"]
-
-        with open(self.path_disk, "wb") as f:
-            f.write(requests.get(file_url).json())
-
-        with open(self.path_disk, "rb") as f1:
-            requests.put(upload_link, f1)
+        requests.put(upload_link, get_info().text)
 
         return
 
 
 yd = YD(TOKEN)
 get_ip()
+get_info()
 yd.create_folder("IP-address")
-yd.upload_file_by_url(file_url=get_info(), path="IP-address")
+yd.upload_file_by_url("IP-address")
